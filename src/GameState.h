@@ -41,6 +41,17 @@ const float KILLER_HUNT_SPEED_3S = 3.0f;
 const float KILLER_SEARCH_SPEED = 1.5f;
 const float KILLER_SEARCH_ARRIVAL_THRESHOLD = 20.0f;
 
+// Collision detection constants
+const float PLAYER_COLLISION_RADIUS = 15.0f;
+const float KILLER_COLLISION_RADIUS = 15.0f;
+
+// Jumpscare constants
+const float JUMPSCARE_DURATION = 1.5f;
+const float JUMPSCARE_ZOOM_TARGET = 3.0f;
+
+// Restart delay constant
+const float RESTART_DELAY = 2.0f;
+
 // Killer AI state tracking
 struct KillerAIState {
     KillerState state;
@@ -73,6 +84,15 @@ struct GameState {
     // Darkness render texture
     RenderTexture2D darknessTexture;
     bool darknessTextureInitialized;
+
+    // Jumpscare state
+    bool jumpscareActive;
+    float jumpscareTimer;
+    float jumpscareZoom;
+
+    // Restart state
+    float restartDelayTimer;
+    bool canRestart;
 };
 
 // Initialize a new game state with default values
@@ -103,6 +123,15 @@ inline GameState CreateGameState() {
 
     // Darkness texture will be initialized in main after window creation
     state.darknessTextureInitialized = false;
+
+    // Initialize jumpscare state
+    state.jumpscareActive = false;
+    state.jumpscareTimer = 0.0f;
+    state.jumpscareZoom = 1.0f;
+
+    // Initialize restart state
+    state.restartDelayTimer = 0.0f;
+    state.canRestart = false;
 
     return state;
 }

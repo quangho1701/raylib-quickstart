@@ -12,6 +12,16 @@ void InitGame(GameState& state) {
     state.gameOver = false;
     state.gameWon = false;
 
+    // Reset jumpscare state
+    state.jumpscareActive = false;
+    state.jumpscareTimer = 0.0f;
+    state.jumpscareZoom = 1.0f;
+    state.camera.zoom = 1.0f;
+
+    // Reset restart state
+    state.restartDelayTimer = 0.0f;
+    state.canRestart = false;
+
     // Spawn Player at center
     Vector2 playerPos = {MAP_WIDTH / 2.0f, MAP_HEIGHT / 2.0f};
     Entity player = CreateEntity(playerPos, ENTITY_PLAYER);
@@ -259,6 +269,94 @@ void UpdateKiller(GameState& state, float deltaTime) {
     killer->pos = ClampPosition(killer->pos, 0.0f, 0.0f, MAP_WIDTH, MAP_HEIGHT);
 }
 
+// Update game timer
+void UpdateTimer(GameState& state, float deltaTime) {
+    if (state.timer > 0.0f) {
+        state.timer -= deltaTime;
+        if (state.timer <= 0.0f) {
+            state.timer = 0.0f;
+            state.gameWon = true;  // Survived the full duration!
+        }
+    }
+}
+
+// Check for collision between player and killer
+void CheckPlayerKillerCollision(GameState& state) {
+    Entity* player = GetPlayer(state);
+    Entity* killer = GetKiller(state);
+    if (!player || !killer || !player->active || !killer->active) return;
+
+    if (CheckCollisionCircles(player->pos, PLAYER_COLLISION_RADIUS,
+                              killer->pos, KILLER_COLLISION_RADIUS)) {
+        state.gameOver = true;
+        state.jumpscareActive = true;
+        state.jumpscareTimer = 0.0f;
+    }
+}
+
+// Check for collision between player and exit door
+void CheckPlayerExitCollision(GameState& state) {
+    Entity* player = GetPlayer(state);
+    Entity* exitDoor = GetExitDoor(state);
+    if (!player || !exitDoor || !player->active || !exitDoor->active) return;
+
+    // Create rectangle for exit door
+    Rectangle exitRect = {
+        exitDoor->pos.x - EXIT_DOOR_WIDTH / 2.0f,
+        exitDoor->pos.y - EXIT_DOOR_HEIGHT / 2.0f,
+        EXIT_DOOR_WIDTH,
+        EXIT_DOOR_HEIGHT
+    };
+
+    // Check if player center is within exit door
+    if (CheckCollisionPointRec(player->pos, exitRect)) {
+        state.gameWon = true;
+    }
+}
+
+// Update jumpscare animation (camera zoom on killer)
+void UpdateJumpscare(GameState& state, float deltaTime) {
+    if (!state.jumpscareActive) return;
+
+    Entity* killer = GetKiller(state);
+    if (!killer) return;
+
+    state.jumpscareTimer += deltaTime;
+
+    // Progress from 0 to 1 over JUMPSCARE_DURATION
+    float progress = state.jumpscareTimer / JUMPSCARE_DURATION;
+    progress = Clamp(progress, 0.0f, 1.0f);
+
+    // Lerp zoom from 1.0 to JUMPSCARE_ZOOM_TARGET
+    state.jumpscareZoom = Lerp(1.0f, JUMPSCARE_ZOOM_TARGET, progress);
+    state.camera.zoom = state.jumpscareZoom;
+
+    // Lerp camera target to killer position for dramatic effect
+    float lerpFactor = progress * 0.1f;
+    state.camera.target.x = Lerp(state.camera.target.x, killer->pos.x, lerpFactor);
+    state.camera.target.y = Lerp(state.camera.target.y, killer->pos.y, lerpFactor);
+
+    // End jumpscare after duration
+    if (state.jumpscareTimer >= JUMPSCARE_DURATION) {
+        state.jumpscareActive = false;
+    }
+}
+
+// Update restart delay timer
+void UpdateRestartDelay(GameState& state, float deltaTime) {
+    if (!state.gameOver && !state.gameWon) return;
+
+    // If jumpscare is active, don't start restart timer yet
+    if (state.jumpscareActive) return;
+
+    if (!state.canRestart) {
+        state.restartDelayTimer += deltaTime;
+        if (state.restartDelayTimer >= RESTART_DELAY) {
+            state.canRestart = true;
+        }
+    }
+}
+
 // Sketchbook style constants - "Diary of a Wimpy Kid" aesthetic
 const float SKETCH_LINE_THICK = 2.0f;      // Bold sketchy lines
 const float SKETCH_LINE_THIN = 1.5f;       // Thinner detail lines
@@ -495,6 +593,87 @@ void DrawDarknessOverlay(GameState& state) {
                    WHITE);
 }
 
+// Draw timer bar at top of screen
+void DrawTimerBar(GameState& state) {
+    int screenWidth = 800;
+    float barWidth = 300.0f;
+    float barHeight = 25.0f;
+    float barX = (screenWidth - barWidth) / 2.0f;
+    float barY = 15.0f;
+
+    // Calculate fill percentage
+    float fillPercent = state.timer / GAME_MAX_TIME;
+    fillPercent = Clamp(fillPercent, 0.0f, 1.0f);
+
+    // Background bar (dark gray outline)
+    Rectangle bgRect = {barX - 2, barY - 2, barWidth + 4, barHeight + 4};
+    DrawRectangleLinesEx(bgRect, 2.0f, BLACK);
+
+    // Fill bar (color changes based on time remaining)
+    Color fillColor;
+    if (fillPercent > 0.5f) {
+        fillColor = DARKGREEN;
+    } else if (fillPercent > 0.25f) {
+        fillColor = ORANGE;
+    } else {
+        fillColor = RED;
+    }
+
+    Rectangle fillRect = {barX, barY, barWidth * fillPercent, barHeight};
+    DrawRectangleRec(fillRect, fillColor);
+
+    // Timer text centered above the bar
+    const char* timerText = TextFormat("SURVIVE: %.1fs", state.timer);
+    int textWidth = MeasureText(timerText, 24);
+    DrawText(timerText, (screenWidth - textWidth) / 2, (int)(barY + barHeight + 5), 24, BLACK);
+}
+
+// Draw game over or game won overlay
+void DrawGameEndOverlay(GameState& state) {
+    if (!state.gameOver && !state.gameWon) return;
+
+    int screenWidth = 800;
+    int screenHeight = 600;
+
+    // Semi-transparent overlay
+    DrawRectangle(0, 0, screenWidth, screenHeight, {0, 0, 0, 150});
+
+    if (state.gameOver) {
+        // Game Over - red text
+        const char* gameOverText = "GAME OVER";
+        int textWidth = MeasureText(gameOverText, 60);
+        DrawText(gameOverText, (screenWidth - textWidth) / 2, screenHeight / 2 - 60, 60, RED);
+
+        const char* caughtText = "The killer caught you!";
+        int caughtWidth = MeasureText(caughtText, 24);
+        DrawText(caughtText, (screenWidth - caughtWidth) / 2, screenHeight / 2 + 10, 24, WHITE);
+    } else if (state.gameWon) {
+        // Game Won - green text
+        const char* winText = "YOU ESCAPED!";
+        int textWidth = MeasureText(winText, 60);
+        DrawText(winText, (screenWidth - textWidth) / 2, screenHeight / 2 - 60, 60, GREEN);
+
+        const char* escapeText = state.timer <= 0.0f ? "You survived the night!" : "You reached the exit!";
+        int escapeWidth = MeasureText(escapeText, 24);
+        DrawText(escapeText, (screenWidth - escapeWidth) / 2, screenHeight / 2 + 10, 24, WHITE);
+    }
+
+    // Restart prompt (only show after delay)
+    if (state.canRestart) {
+        const char* restartText = "Press ENTER or SPACE to restart";
+        int restartWidth = MeasureText(restartText, 20);
+        DrawText(restartText, (screenWidth - restartWidth) / 2, screenHeight / 2 + 80, 20, LIGHTGRAY);
+    } else {
+        // Show countdown hint
+        float remaining = RESTART_DELAY - state.restartDelayTimer;
+        if (remaining > 0 && !state.jumpscareActive) {
+            const char* waitText = TextFormat("Wait %.1fs...", remaining);
+            int waitWidth = MeasureText(waitText, 16);
+            DrawText(waitText, (screenWidth - waitWidth) / 2, screenHeight / 2 + 80, 16, GRAY);
+        }
+    }
+}
+
 // Draw compass arrow at mouse cursor pointing to exit
 void DrawCompassArrow(GameState& state) {
     if (!state.flashlightOn) return;  // Only visible when flashlight is on
@@ -555,6 +734,13 @@ int main() {
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
 
+        // Handle restart input (with debounce - only after delay)
+        if ((state.gameOver || state.gameWon) && state.canRestart) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                InitGame(state);
+            }
+        }
+
         // Update game logic (only if game is still running)
         if (!state.gameOver && !state.gameWon) {
             UpdateFlashlight(state);
@@ -562,7 +748,20 @@ int main() {
             UpdateNPCs(state, deltaTime);
             UpdateKiller(state, deltaTime);
             UpdateCamera(state, deltaTime);
+
+            // Update timer
+            UpdateTimer(state, deltaTime);
+
+            // Check collisions
+            CheckPlayerKillerCollision(state);
+            CheckPlayerExitCollision(state);
         }
+
+        // Update jumpscare (runs even after gameOver)
+        UpdateJumpscare(state, deltaTime);
+
+        // Update restart delay timer
+        UpdateRestartDelay(state, deltaTime);
 
         // Draw
         BeginDrawing();
@@ -579,31 +778,37 @@ int main() {
         EndMode2D();
 
         // Draw darkness overlay (screen space, covers everything)
-        DrawDarknessOverlay(state);
+        // Don't draw darkness during jumpscare for dramatic effect
+        if (!state.jumpscareActive) {
+            DrawDarknessOverlay(state);
+        }
 
         // Draw compass arrow (screen space, on top of darkness)
         DrawCompassArrow(state);
 
-        // UI overlay - Timer display
+        // UI overlay - Timer bar
+        DrawTimerBar(state);
+
+        // Debug info (moved to bottom left to not interfere with timer)
         Entity* killer = GetKiller(state);
         float panicFactor = 1.0f - (state.timer / GAME_MAX_TIME);
-        DrawText(TextFormat("SURVIVE: %.1fs", state.timer), 320, 10, 24, BLACK);
-
-        // Debug info
-        DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 10, 16, GRAY);
+        DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 550, 16, GRAY);
         if (killer) {
             float speedMult = GetKillerSpeedMultiplier(state);
             float currentSpeed = (KILLER_BASE_SPEED + panicFactor * KILLER_BONUS_SPEED) * speedMult;
-            DrawText(TextFormat("Killer Speed: %.0f (x%.1f)", currentSpeed, speedMult), 10, 30, 16, GRAY);
+            DrawText(TextFormat("Killer Speed: %.0f (x%.1f)", currentSpeed, speedMult), 10, 530, 16, GRAY);
 
             // Show killer state
             const char* stateNames[] = {"NORMAL", "HUNT", "SEARCH"};
-            DrawText(TextFormat("Killer State: %s", stateNames[state.killerAI.state]), 10, 50, 16, GRAY);
+            DrawText(TextFormat("Killer State: %s", stateNames[state.killerAI.state]), 10, 510, 16, GRAY);
         }
 
         // Flashlight indicator
-        DrawText(state.flashlightOn ? "FLASHLIGHT: ON" : "FLASHLIGHT: OFF", 10, 70, 16,
+        DrawText(state.flashlightOn ? "FLASHLIGHT: ON" : "FLASHLIGHT: OFF", 10, 580, 16,
                  state.flashlightOn ? RED : GRAY);
+
+        // Draw game end overlay (on top of everything)
+        DrawGameEndOverlay(state);
 
         EndDrawing();
     }
