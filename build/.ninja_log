@@ -63,3 +63,5 @@
 5868	15640	7916766633342536	_deps/raylib-build/raylib/CMakeFiles/raylib.dir/raudio.c.obj	f90c0c4f7e9253d4
 15640	15812	7916766731066307	_deps/raylib-build/raylib/libraylib.a	94af6be270a7c2e8
 15812	16072	7916766732790963	masquerade-panic.exe	943df35c42350612
+13	660	7916771189792500	CMakeFiles/masquerade-panic.dir/src/main.cpp.obj	b7c4958446e1b636
+661	908	7916771196265617	masquerade-panic.exe	943df35c42350612

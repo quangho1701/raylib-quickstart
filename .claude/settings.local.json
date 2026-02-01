@@ -21,7 +21,8 @@
       "Bash(\"$WINLIBS_PATH/cmake.exe\" --build build)",
       "Bash(.buildmy-awesome-game.exe)",
       "Bash(build/my-awesome-game.exe)",
-      "Bash(./masquerade-panic.exe)"
+      "Bash(./masquerade-panic.exe)",
+      "Bash(start build/masquerade-panic.exe)"
     ]
   }
 }
