@@ -161,95 +161,141 @@ void UpdateKiller(GameState& state, float deltaTime) {
     killer->pos = ClampPosition(killer->pos, 0.0f, 0.0f, MAP_WIDTH, MAP_HEIGHT);
 }
 
-// Draw a simple stick figure for the player
+// Sketchbook style constants - "Diary of a Wimpy Kid" aesthetic
+const float SKETCH_LINE_THICK = 2.0f;      // Bold sketchy lines
+const float SKETCH_LINE_THIN = 1.5f;       // Thinner detail lines
+const float FIGURE_SCALE = 1.3f;           // Slightly larger figures
+
+// Draw a simple stick figure for the player (plain, no mask)
 void DrawPlayer(Entity& player) {
     float x = player.pos.x;
     float y = player.pos.y;
+    float s = FIGURE_SCALE;
 
-    // Head (circle)
-    DrawCircleLines((int)x, (int)(y - 20), 10, BLACK);
+    // Head (bold circle outline - drawn twice for sketchy effect)
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(12*s), BLACK);
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(11*s), BLACK);
 
-    // Body (line)
-    DrawLine((int)x, (int)(y - 10), (int)x, (int)(y + 15), BLACK);
+    // Simple dot eyes
+    DrawCircle((int)(x - 4*s), (int)(y - 27*s), 2*s, BLACK);
+    DrawCircle((int)(x + 4*s), (int)(y - 27*s), 2*s, BLACK);
 
-    // Arms (line)
-    DrawLine((int)(x - 12), (int)y, (int)(x + 12), (int)y, BLACK);
+    // Body (thick line)
+    DrawLineEx({x, y - 13*s}, {x, y + 18*s}, SKETCH_LINE_THICK, BLACK);
 
-    // Legs (lines)
-    DrawLine((int)x, (int)(y + 15), (int)(x - 10), (int)(y + 30), BLACK);
-    DrawLine((int)x, (int)(y + 15), (int)(x + 10), (int)(y + 30), BLACK);
+    // Arms (slightly angled for more character)
+    DrawLineEx({x, y - 5*s}, {x - 15*s, y + 5*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y - 5*s}, {x + 15*s, y + 5*s}, SKETCH_LINE_THICK, BLACK);
+
+    // Legs (thick lines)
+    DrawLineEx({x, y + 18*s}, {x - 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y + 18*s}, {x + 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
 }
 
-// Draw NPC (stick figure with mask over face)
+// Draw NPC (stick figure with masquerade mask over face)
 void DrawNPC(Entity& npc) {
     float x = npc.pos.x;
     float y = npc.pos.y;
+    float s = FIGURE_SCALE;
 
-    // Head (circle)
-    DrawCircleLines((int)x, (int)(y - 20), 10, BLACK);
+    // Head (bold circle outline - sketchy double line)
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(12*s), BLACK);
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(11*s), BLACK);
 
-    // Mask (rectangle over face)
-    DrawRectangleLines((int)(x - 8), (int)(y - 26), 16, 12, BLACK);
+    // Masquerade mask (rectangle with eye holes) - covers upper face
+    Rectangle maskRect = {x - 10*s, y - 32*s, 20*s, 12*s};
+    DrawRectangleLinesEx(maskRect, SKETCH_LINE_THICK, BLACK);
+    // Eye holes in mask (small circles)
+    DrawCircle((int)(x - 5*s), (int)(y - 26*s), 2*s, BLACK);
+    DrawCircle((int)(x + 5*s), (int)(y - 26*s), 2*s, BLACK);
 
-    // Body (line)
-    DrawLine((int)x, (int)(y - 10), (int)x, (int)(y + 15), BLACK);
+    // Body (thick line)
+    DrawLineEx({x, y - 13*s}, {x, y + 18*s}, SKETCH_LINE_THICK, BLACK);
 
-    // Arms (line)
-    DrawLine((int)(x - 12), (int)y, (int)(x + 12), (int)y, BLACK);
+    // Arms (slightly angled)
+    DrawLineEx({x, y - 5*s}, {x - 15*s, y + 5*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y - 5*s}, {x + 15*s, y + 5*s}, SKETCH_LINE_THICK, BLACK);
 
-    // Legs (lines)
-    DrawLine((int)x, (int)(y + 15), (int)(x - 10), (int)(y + 30), BLACK);
-    DrawLine((int)x, (int)(y + 15), (int)(x + 10), (int)(y + 30), BLACK);
+    // Legs (thick lines)
+    DrawLineEx({x, y + 18*s}, {x - 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y + 18*s}, {x + 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
 }
 
-// Draw Killer (stick figure with creepy smile)
+// Draw Killer (stick figure with creepy bezier smile - the horror element!)
 void DrawKiller(Entity& killer) {
     float x = killer.pos.x;
     float y = killer.pos.y;
+    float s = FIGURE_SCALE;
 
-    // Head (circle)
-    DrawCircleLines((int)x, (int)(y - 20), 10, BLACK);
+    // Head (bold circle outline - sketchy double line)
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(12*s), BLACK);
+    DrawCircleLines((int)x, (int)(y - 25*s), (int)(11*s), BLACK);
 
-    // Creepy smile (curved line using multiple segments)
-    // Draw a wide curved smile
-    DrawLine((int)(x - 6), (int)(y - 18), (int)(x - 3), (int)(y - 15), BLACK);
-    DrawLine((int)(x - 3), (int)(y - 15), (int)(x + 3), (int)(y - 15), BLACK);
-    DrawLine((int)(x + 3), (int)(y - 15), (int)(x + 6), (int)(y - 18), BLACK);
+    // Creepy wide eyes (slightly larger, unsettling)
+    DrawCircle((int)(x - 5*s), (int)(y - 28*s), 3*s, BLACK);
+    DrawCircle((int)(x + 5*s), (int)(y - 28*s), 3*s, BLACK);
+    // Tiny white pupils for that unhinged look
+    DrawCircle((int)(x - 5*s), (int)(y - 28*s), 1*s, WHITE);
+    DrawCircle((int)(x + 5*s), (int)(y - 28*s), 1*s, WHITE);
 
-    // Eyes (small dots)
-    DrawCircle((int)(x - 4), (int)(y - 22), 2, BLACK);
-    DrawCircle((int)(x + 4), (int)(y - 22), 2, BLACK);
+    // CREEPY BEZIER SMILE - the signature horror element
+    // Wide, curved smile using DrawLineBezier for smooth creepiness
+    Vector2 smileStart = {x - 8*s, y - 20*s};
+    Vector2 smileEnd = {x + 8*s, y - 20*s};
+    // Draw the smile curve (bezier with control point below for upward curve)
+    DrawLineBezier(smileStart, smileEnd, SKETCH_LINE_THICK, BLACK);
+    // Add curve endpoints going up for that sinister grin
+    DrawLineEx({x - 8*s, y - 20*s}, {x - 10*s, y - 23*s}, SKETCH_LINE_THIN, BLACK);
+    DrawLineEx({x + 8*s, y - 20*s}, {x + 10*s, y - 23*s}, SKETCH_LINE_THIN, BLACK);
 
-    // Body (line)
-    DrawLine((int)x, (int)(y - 10), (int)x, (int)(y + 15), BLACK);
+    // Body (thick line)
+    DrawLineEx({x, y - 13*s}, {x, y + 18*s}, SKETCH_LINE_THICK, BLACK);
 
-    // Arms (line)
-    DrawLine((int)(x - 12), (int)y, (int)(x + 12), (int)y, BLACK);
+    // Arms (slightly raised, menacing pose)
+    DrawLineEx({x, y - 5*s}, {x - 18*s, y - 2*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y - 5*s}, {x + 18*s, y - 2*s}, SKETCH_LINE_THICK, BLACK);
 
-    // Legs (lines)
-    DrawLine((int)x, (int)(y + 15), (int)(x - 10), (int)(y + 30), BLACK);
-    DrawLine((int)x, (int)(y + 15), (int)(x + 10), (int)(y + 30), BLACK);
+    // Legs (thick lines)
+    DrawLineEx({x, y + 18*s}, {x - 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
+    DrawLineEx({x, y + 18*s}, {x + 12*s, y + 38*s}, SKETCH_LINE_THICK, BLACK);
 }
 
-// Draw Exit Door
+// Draw Exit Door (sketchy style - green stands out as the goal)
 void DrawExitDoor(Entity& door) {
     float x = door.pos.x;
     float y = door.pos.y;
 
-    // Door rectangle (green outline as per plan)
+    // Door rectangle (sketchy double outline for hand-drawn feel)
     Rectangle doorRect = {
         x - EXIT_DOOR_WIDTH / 2.0f,
         y - EXIT_DOOR_HEIGHT / 2.0f,
         EXIT_DOOR_WIDTH,
         EXIT_DOOR_HEIGHT
     };
-    DrawRectangleLinesEx(doorRect, 3.0f, GREEN);
+    DrawRectangleLinesEx(doorRect, SKETCH_LINE_THICK + 1, DARKGREEN);
+    // Inner rectangle for sketchy effect
+    Rectangle innerRect = {
+        doorRect.x + 3, doorRect.y + 3,
+        doorRect.width - 6, doorRect.height - 6
+    };
+    DrawRectangleLinesEx(innerRect, SKETCH_LINE_THIN, DARKGREEN);
 
-    // Door knob (positioned relative to smaller door)
-    DrawCircle((int)(x + 20), (int)y, 3, GREEN);
+    // Door panels (sketchy rectangles inside)
+    float panelW = 30.0f;
+    float panelH = 50.0f;
+    DrawRectangleLinesEx({x - panelW/2, y - EXIT_DOOR_HEIGHT/2 + 15, panelW, panelH}, SKETCH_LINE_THIN, DARKGREEN);
+    DrawRectangleLinesEx({x - panelW/2, y + 10, panelW, panelH}, SKETCH_LINE_THIN, DARKGREEN);
 
-    // "EXIT" text (smaller to fit the door)
-    DrawText("EXIT", (int)(x - 18), (int)(y - 8), 16, GREEN);
+    // Door knob (sketchy circle)
+    DrawCircleLines((int)(x + 25), (int)y, 5, DARKGREEN);
+    DrawCircle((int)(x + 25), (int)y, 2, DARKGREEN);
+
+    // "EXIT" text with arrow (hand-drawn style)
+    DrawText("EXIT", (int)(x - 20), (int)(y - EXIT_DOOR_HEIGHT/2 - 25), 20, DARKGREEN);
+    // Arrow pointing down
+    DrawLineEx({x, y - EXIT_DOOR_HEIGHT/2 - 8}, {x, y - EXIT_DOOR_HEIGHT/2 + 5}, SKETCH_LINE_THICK, DARKGREEN);
+    DrawLineEx({x - 5, y - EXIT_DOOR_HEIGHT/2}, {x, y - EXIT_DOOR_HEIGHT/2 + 5}, SKETCH_LINE_THIN, DARKGREEN);
+    DrawLineEx({x + 5, y - EXIT_DOOR_HEIGHT/2}, {x, y - EXIT_DOOR_HEIGHT/2 + 5}, SKETCH_LINE_THIN, DARKGREEN);
 }
 
 // Draw all entities
@@ -280,17 +326,35 @@ void DrawEntities(GameState& state) {
     }
 }
 
-// Draw the game world (map bounds indicator)
+// Draw the game world - sketchbook paper style
 void DrawWorld() {
-    // Draw map boundary
-    DrawRectangleLines(0, 0, (int)MAP_WIDTH, (int)MAP_HEIGHT, LIGHTGRAY);
+    // Subtle paper texture - faint ruled lines like notebook paper
+    Color lineColor = {220, 220, 220, 255};  // Very light gray
 
-    // Draw grid for visual reference
-    for (int x = 0; x <= (int)MAP_WIDTH; x += 200) {
-        DrawLine(x, 0, x, (int)MAP_HEIGHT, LIGHTGRAY);
+    // Horizontal ruled lines (like notebook paper)
+    for (int y = 0; y <= (int)MAP_HEIGHT; y += 40) {
+        DrawLineEx({0, (float)y}, {MAP_WIDTH, (float)y}, 1.0f, lineColor);
     }
-    for (int y = 0; y <= (int)MAP_HEIGHT; y += 200) {
-        DrawLine(0, y, (int)MAP_WIDTH, y, LIGHTGRAY);
+
+    // Margin line on left (red, like real notebook)
+    Color marginColor = {255, 200, 200, 255};  // Faint red/pink
+    DrawLineEx({80, 0}, {80, MAP_HEIGHT}, 1.5f, marginColor);
+
+    // Map boundary - sketchy double border
+    DrawRectangleLinesEx({0, 0, MAP_WIDTH, MAP_HEIGHT}, 3.0f, LIGHTGRAY);
+    DrawRectangleLinesEx({4, 4, MAP_WIDTH - 8, MAP_HEIGHT - 8}, 1.0f, LIGHTGRAY);
+
+    // Corner doodles (like someone drew on their notebook)
+    // Top-left corner scribble
+    DrawLineEx({20, 20}, {50, 25}, SKETCH_LINE_THIN, LIGHTGRAY);
+    DrawLineEx({50, 25}, {30, 40}, SKETCH_LINE_THIN, LIGHTGRAY);
+
+    // Bottom-right corner spiral
+    float cx = MAP_WIDTH - 60;
+    float cy = MAP_HEIGHT - 60;
+    for (int i = 0; i < 3; i++) {
+        float r = 10.0f + i * 8.0f;
+        DrawCircleLines((int)cx, (int)cy, (int)r, LIGHTGRAY);
     }
 }
 
