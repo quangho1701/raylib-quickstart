@@ -62,4 +62,44 @@ inline Vector2 RandomPosition(float minX, float minY, float maxX, float maxY) {
     return {RandomFloat(minX, maxX), RandomFloat(minY, maxY)};
 }
 
+// Random normalized direction vector
+inline Vector2 RandomDirection() {
+    float angle = RandomFloat(0.0f, 2.0f * PI);
+    return {cosf(angle), sinf(angle)};
+}
+
+// Random velocity with given speed
+inline Vector2 RandomVelocity(float speed) {
+    Vector2 dir = RandomDirection();
+    return {dir.x * speed, dir.y * speed};
+}
+
+// Get a random position on the edge of the map (for exit door)
+inline Vector2 RandomEdgePosition(float mapWidth, float mapHeight, float objectWidth, float objectHeight) {
+    int edge = GetRandomValue(0, 3);  // 0=top, 1=right, 2=bottom, 3=left
+    Vector2 pos;
+
+    switch (edge) {
+        case 0:  // Top edge
+            pos.x = RandomFloat(objectWidth / 2.0f, mapWidth - objectWidth / 2.0f);
+            pos.y = objectHeight / 2.0f;
+            break;
+        case 1:  // Right edge
+            pos.x = mapWidth - objectWidth / 2.0f;
+            pos.y = RandomFloat(objectHeight / 2.0f, mapHeight - objectHeight / 2.0f);
+            break;
+        case 2:  // Bottom edge
+            pos.x = RandomFloat(objectWidth / 2.0f, mapWidth - objectWidth / 2.0f);
+            pos.y = mapHeight - objectHeight / 2.0f;
+            break;
+        case 3:  // Left edge
+        default:
+            pos.x = objectWidth / 2.0f;
+            pos.y = RandomFloat(objectHeight / 2.0f, mapHeight - objectHeight / 2.0f);
+            break;
+    }
+
+    return pos;
+}
+
 #endif // UTILS_H

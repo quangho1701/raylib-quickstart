@@ -7,7 +7,8 @@
 enum EntityType {
     ENTITY_PLAYER = 0,
     ENTITY_NPC,
-    ENTITY_KILLER
+    ENTITY_KILLER,
+    ENTITY_EXIT_DOOR
 };
 
 struct Entity {

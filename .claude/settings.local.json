@@ -22,7 +22,10 @@
       "Bash(.buildmy-awesome-game.exe)",
       "Bash(build/my-awesome-game.exe)",
       "Bash(./masquerade-panic.exe)",
-      "Bash(start build/masquerade-panic.exe)"
+      "Bash(start build/masquerade-panic.exe)",
+      "Bash(.masquerade-panic.exe)",
+      "Bash(d:my-awesome-gamebuildmasquerade-panic.exe)",
+      "Bash(cmd /c \"d:\\\\my-awesome-game\\\\build\\\\masquerade-panic.exe\")"
     ]
   }
 }
