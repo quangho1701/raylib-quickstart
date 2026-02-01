@@ -841,6 +841,14 @@ int main() {
     InitWindow(800, 600, "Masquerade Panic");
     SetTargetFPS(60);
 
+    // Initialize audio device (Phase 6)
+    InitAudioDevice();
+
+    // Load background music
+    Music gameMusic = LoadMusicStream("assets/Soundtrack for Game.mp3");
+    gameMusic.looping = true;
+    PlayMusicStream(gameMusic);
+
     // Initialize game state and spawn all entities
     GameState state = CreateGameState();
     // Don't spawn entities yet, InitGame is called when Play is pressed
@@ -853,6 +861,9 @@ int main() {
 
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
+
+        // Update music stream (required every frame for streaming audio)
+        UpdateMusicStream(gameMusic);
 
         BeginDrawing();
         ClearBackground(RAYWHITE); // Paper background
@@ -947,6 +958,10 @@ int main() {
     if (state.darknessTextureInitialized) {
         UnloadRenderTexture(state.darknessTexture);
     }
+
+    // Cleanup audio (Phase 6)
+    UnloadMusicStream(gameMusic);
+    CloseAudioDevice();
 
     CloseWindow();
     return 0;
