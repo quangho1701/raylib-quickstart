@@ -63,7 +63,14 @@ struct KillerAIState {
     bool wasFlashlightOn;
 };
 
+// Game screen states
+enum GameScreen {
+    SCREEN_TITLE,
+    SCREEN_GAMEPLAY
+};
+
 struct GameState {
+    GameScreen currentScreen; // Current active screen
     float timer;
     bool gameOver;
     bool gameWon;
@@ -104,6 +111,7 @@ struct GameState {
 // Initialize a new game state with default values
 inline GameState CreateGameState() {
     GameState state;
+    state.currentScreen = SCREEN_TITLE; // Start at title screen
     state.timer = GAME_MAX_TIME;
     state.gameOver = false;
     state.gameWon = false;

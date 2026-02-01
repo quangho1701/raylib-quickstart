@@ -367,7 +367,8 @@ void UpdateJumpscare(GameState& state, float deltaTime) {
     state.camera.zoom = state.jumpscareZoom;
 
     // Lerp camera target to killer position for dramatic effect
-    float lerpFactor = progress * 0.1f;
+    // Use a stronger lerp (0.2) to ensure we get to the face quickly
+    float lerpFactor = 0.2f;
     state.camera.target.x = Lerp(state.camera.target.x, killer->pos.x, lerpFactor);
     state.camera.target.y = Lerp(state.camera.target.y, killer->pos.y, lerpFactor);
 
@@ -759,9 +760,81 @@ void DrawCompassArrow(GameState& state) {
     // Draw arrow shaft
     DrawLineEx(mouseScreenPos, arrowTip, 3.0f, DARKGREEN);
 
-    // Draw arrowhead
-    DrawLineEx(arrowTip, headPoint1, 3.0f, DARKGREEN);
+        DrawLineEx(arrowTip, headPoint1, 3.0f, DARKGREEN);
     DrawLineEx(arrowTip, headPoint2, 3.0f, DARKGREEN);
+}
+
+// Draw the Start Menu - consistent sketchbook style
+void DrawTitleScreen(GameState& state) {
+    int screenWidth = 800;
+    int screenHeight = 600;
+
+    // Draw background (paper texture effect using DrawWorld logic)
+    DrawWorld();
+    
+    // Title: "Who's The Killer?"
+    // Hand-drawn style: big, bold, slightly messy
+    const char* titleText = "Who's The Killer?";
+    int titleFontSize = 60;
+    int titleWidth = MeasureText(titleText, titleFontSize);
+    int titleX = (screenWidth - titleWidth) / 2;
+    int titleY = 150;
+    
+    // Draw title shadow/double-line for sketchbook 3D effect
+    DrawText(titleText, titleX + 4, titleY + 4, titleFontSize, LIGHTGRAY);
+    DrawText(titleText, titleX, titleY, titleFontSize, BLACK);
+    
+    // Underline (sketchy)
+    DrawLineEx({(float)titleX - 20, (float)titleY + 65}, {(float)titleX + titleWidth + 20, (float)titleY + 60}, 3.0f, BLACK);
+    DrawLineEx({(float)titleX - 10, (float)titleY + 70}, {(float)titleX + titleWidth + 10, (float)titleY + 65}, 2.0f, BLACK);
+
+    // Play Button
+    // A box with "PLAY" inside
+    int btnWidth = 200;
+    int btnHeight = 60;
+    int btnX = (screenWidth - btnWidth) / 2;
+    int btnY = 350;
+    
+    Rectangle btnRect = {(float)btnX, (float)btnY, (float)btnWidth, (float)btnHeight};
+    
+    // Check hover
+    Vector2 mousePos = GetMousePosition();
+    bool isHovered = CheckCollisionPointRec(mousePos, btnRect);
+    
+    // Draw Button Box (sketchy lines)
+    if (isHovered) {
+        // Active/Hover interaction: slightly wobbly or bolder
+        DrawRectangleLinesEx(btnRect, 4.0f, RED); // Red for "Killer" vibe or just highlight
+        DrawRectangleLinesEx({btnRect.x - 3, btnRect.y - 3, btnRect.width + 6, btnRect.height + 6}, 1.0f, RED);
+    } else {
+        DrawRectangleLinesEx(btnRect, 3.0f, BLACK);
+        DrawRectangleLinesEx({btnRect.x - 3, btnRect.y - 3, btnRect.width + 6, btnRect.height + 6}, 1.0f, BLACK);
+    }
+
+    // Play Text
+    const char* btnText = "PLAY";
+    int btnFontSize = 40;
+    int btnTextWidth = MeasureText(btnText, btnFontSize);
+    int btnTextX = btnX + (btnWidth - btnTextWidth) / 2;
+    int btnTextY = btnY + (btnHeight - btnFontSize) / 2;
+    
+    DrawText(btnText, btnTextX, btnTextY, btnFontSize, isHovered ? RED : BLACK);
+    
+    // Instructions/Flavor text
+    const char* instr = "Find the killer. Don't die.";
+    int instrWidth = MeasureText(instr, 20);
+    DrawText(instr, (screenWidth - instrWidth) / 2, 550, 20, DARKGRAY);
+
+    // Handle Input
+    if (isHovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        InitGame(state);
+        state.currentScreen = SCREEN_GAMEPLAY;
+    }
+    // Also allow Enter to play
+    if (IsKeyPressed(KEY_ENTER)) {
+        InitGame(state);
+        state.currentScreen = SCREEN_GAMEPLAY;
+    }
 }
 
 int main() {
@@ -770,7 +843,9 @@ int main() {
 
     // Initialize game state and spawn all entities
     GameState state = CreateGameState();
-    InitGame(state);
+    // Don't spawn entities yet, InitGame is called when Play is pressed
+    // But CreateGameState sets defaults. Let's ensure clean state.
+    // InitGame(state); // We will call this on Play
 
     // Initialize darkness render texture (must be after InitWindow)
     state.darknessTexture = LoadRenderTexture(800, 600);
@@ -779,97 +854,96 @@ int main() {
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
 
-        // Handle restart input (with debounce - only after delay)
-        if ((state.gameOver || state.gameWon) && state.canRestart) {
-            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
-                InitGame(state);
+        BeginDrawing();
+        ClearBackground(RAYWHITE); // Paper background
+
+        if (state.currentScreen == SCREEN_TITLE) {
+            DrawTitleScreen(state);
+        }
+        else if (state.currentScreen == SCREEN_GAMEPLAY) {
+            // Handle restart input (with debounce - only after delay)
+            if ((state.gameOver || state.gameWon) && state.canRestart) {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                    InitGame(state);
+                    state.currentScreen = SCREEN_GAMEPLAY; // Ensure we stay in gameplay
+                }
+            }
+
+            // Update game logic (only if game is still running)
+            if (!state.gameOver && !state.gameWon) {
+                UpdateFlashlight(state, deltaTime);
+                UpdatePlayer(state, deltaTime);
+                UpdateNPCs(state, deltaTime);
+                UpdateKiller(state, deltaTime);
+                UpdateCamera(state, deltaTime);
+
+                // Update timer
+                UpdateTimer(state, deltaTime);
+
+                // Check collisions
+                CheckPlayerKillerCollision(state);
+                CheckPlayerExitCollision(state);
+            } else {
+                // Update post-game logic
+                UpdateJumpscare(state, deltaTime);
+                UpdateRestartDelay(state, deltaTime);
+            }
+
+            // --- DRAWING ---
+            BeginMode2D(state.camera);
+            
+                DrawWorld();
+                DrawEntities(state);
+                
+            EndMode2D();
+            
+            // Draw overlays (Screen Space)
+            DrawCompassArrow(state); // Uses screen coordinates
+            
+            // Only draw darkness if game is NOT over (brighten room on death/win)
+            if (!state.gameOver && !state.gameWon) {
+                DrawDarknessOverlay(state);
+            }
+            
+            DrawTimerBar(state);
+            DrawGameEndOverlay(state);
+            
+            // Debug info
+            Entity* killer = GetKiller(state);
+            float elapsedTime = GAME_MAX_TIME - state.timer;
+            float timeSpeedMult = powf(1.05f, elapsedTime);
+            DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 550, 16, GRAY);
+            if (killer) {
+                float speedMult = GetKillerSpeedMultiplier(state);
+                float currentSpeed = KILLER_BASE_SPEED * timeSpeedMult * speedMult;
+                DrawText(TextFormat("Killer Speed: %.0f (time:%.2fx state:%.1fx)", currentSpeed, timeSpeedMult, speedMult), 10, 530, 16, GRAY);
+    
+                // Show killer state
+                const char* stateNames[] = {"NORMAL", "HUNT", "SEARCH"};
+                const char* stateName = (state.killerAI.state >= 0 && state.killerAI.state < 3) ? stateNames[state.killerAI.state] : "UNKNOWN";
+        
+                DrawText(TextFormat("Killer State: %s", stateName), 10, 510, 16, GRAY);
+            }
+    
+            // Flashlight indicator with cooldown and usage timer
+            if (state.flashlightCooldownTime > 0.0f) {
+                char cooldownText[32];
+                sprintf(cooldownText, "FLASHLIGHT: COOLDOWN %.1fs", state.flashlightCooldownTime);
+                DrawText(cooldownText, 10, 580, 16, GRAY);
+            } else if (state.flashlightOn) {
+                char usageText[32];
+                float remaining = FLASHLIGHT_MAX_DURATION - state.flashlightUsageTime;
+                sprintf(usageText, "FLASHLIGHT: ON (%.1fs)", remaining);
+                DrawText(usageText, 10, 580, 16, RED);
+            } else {
+                DrawText("FLASHLIGHT: READY", 10, 580, 16, GREEN);
             }
         }
 
-        // Update game logic (only if game is still running)
-        if (!state.gameOver && !state.gameWon) {
-            UpdateFlashlight(state, deltaTime);
-            UpdatePlayer(state, deltaTime);
-            UpdateNPCs(state, deltaTime);
-            UpdateKiller(state, deltaTime);
-            UpdateCamera(state, deltaTime);
-
-            // Update timer
-            UpdateTimer(state, deltaTime);
-
-            // Check collisions
-            CheckPlayerKillerCollision(state);
-            CheckPlayerExitCollision(state);
-        }
-
-        // Update jumpscare (runs even after gameOver)
-        UpdateJumpscare(state, deltaTime);
-
-        // Update restart delay timer
-        UpdateRestartDelay(state, deltaTime);
-
-        // Draw
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-
-        BeginMode2D(state.camera);
-
-        // Draw world
-        DrawWorld();
-
-        // Draw all entities
-        DrawEntities(state);
-
-        EndMode2D();
-
-        // Draw darkness overlay (screen space, covers everything)
-        // Don't draw darkness during jumpscare for dramatic effect
-        if (!state.jumpscareActive) {
-            DrawDarknessOverlay(state);
-        }
-
-        // Draw compass arrow (screen space, on top of darkness)
-        DrawCompassArrow(state);
-
-        // UI overlay - Timer bar
-        DrawTimerBar(state);
-
-        // Debug info (moved to bottom left to not interfere with timer)
-        Entity* killer = GetKiller(state);
-        float elapsedTime = GAME_MAX_TIME - state.timer;
-        float timeSpeedMult = powf(1.05f, elapsedTime);
-        DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 550, 16, GRAY);
-        if (killer) {
-            float speedMult = GetKillerSpeedMultiplier(state);
-            float currentSpeed = KILLER_BASE_SPEED * timeSpeedMult * speedMult;
-            DrawText(TextFormat("Killer Speed: %.0f (time:%.2fx state:%.1fx)", currentSpeed, timeSpeedMult, speedMult), 10, 530, 16, GRAY);
-
-            // Show killer state
-            const char* stateNames[] = {"NORMAL", "HUNT", "SEARCH"};
-            DrawText(TextFormat("Killer State: %s", stateNames[state.killerAI.state]), 10, 510, 16, GRAY);
-        }
-
-        // Flashlight indicator with cooldown and usage timer
-        if (state.flashlightCooldownTime > 0.0f) {
-            char cooldownText[32];
-            sprintf(cooldownText, "FLASHLIGHT: COOLDOWN %.1fs", state.flashlightCooldownTime);
-            DrawText(cooldownText, 10, 580, 16, GRAY);
-        } else if (state.flashlightOn) {
-            char usageText[32];
-            float remaining = FLASHLIGHT_MAX_DURATION - state.flashlightUsageTime;
-            sprintf(usageText, "FLASHLIGHT: ON (%.1fs)", remaining);
-            DrawText(usageText, 10, 580, 16, RED);
-        } else {
-            DrawText("FLASHLIGHT: READY", 10, 580, 16, GREEN);
-        }
-
-        // Draw game end overlay (on top of everything)
-        DrawGameEndOverlay(state);
-
         EndDrawing();
     }
-
-    // Clean up render texture
+    
+    // Cleanup
     if (state.darknessTextureInitialized) {
         UnloadRenderTexture(state.darknessTexture);
     }
