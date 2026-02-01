@@ -200,15 +200,8 @@ float GetKillerSpeedMultiplier(GameState& state) {
 
     switch (ai.state) {
         case KILLER_STATE_HUNT:
-            // Speed ramps up over time while flashlight is on
-            if (ai.flashlightOnTime >= 3.0f) {
-                return KILLER_HUNT_SPEED_3S;  // 3x after 3 seconds
-            } else if (ai.flashlightOnTime >= 2.0f) {
-                return KILLER_HUNT_SPEED_2S;  // 2x after 2 seconds
-            } else if (ai.flashlightOnTime >= 1.0f) {
-                return KILLER_HUNT_SPEED_1S;  // 1.5x after 1 second
-            }
-            return 1.0f;  // Normal speed for first second
+            // Immediately 3x speed when flashlight is on!
+            return 3.0f;
 
         case KILLER_STATE_SEARCH:
             return KILLER_SEARCH_SPEED;  // 1.5x during search
@@ -288,9 +281,14 @@ void UpdateKiller(GameState& state, float deltaTime) {
     // Calculate direction to target
     Vector2 direction = DirectionTo(killer->pos, targetPos);
 
-    // Calculate speed with panic factor AND state multiplier
-    float panicFactor = 1.0f - (state.timer / GAME_MAX_TIME);
-    float baseSpeed = KILLER_BASE_SPEED + (panicFactor * KILLER_BONUS_SPEED);
+    // Calculate elapsed time since game started
+    float elapsedTime = GAME_MAX_TIME - state.timer;
+
+    // Time-based speed scaling: 1.05x faster every second (exponential growth)
+    float timeSpeedMultiplier = powf(1.05f, elapsedTime);
+
+    // Calculate speed with time scaling AND state multiplier
+    float baseSpeed = KILLER_BASE_SPEED * timeSpeedMultiplier;
     float speedMultiplier = GetKillerSpeedMultiplier(state);
     float currentSpeed = baseSpeed * speedMultiplier;
 
@@ -838,12 +836,13 @@ int main() {
 
         // Debug info (moved to bottom left to not interfere with timer)
         Entity* killer = GetKiller(state);
-        float panicFactor = 1.0f - (state.timer / GAME_MAX_TIME);
+        float elapsedTime = GAME_MAX_TIME - state.timer;
+        float timeSpeedMult = powf(1.05f, elapsedTime);
         DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 550, 16, GRAY);
         if (killer) {
             float speedMult = GetKillerSpeedMultiplier(state);
-            float currentSpeed = (KILLER_BASE_SPEED + panicFactor * KILLER_BONUS_SPEED) * speedMult;
-            DrawText(TextFormat("Killer Speed: %.0f (x%.1f)", currentSpeed, speedMult), 10, 530, 16, GRAY);
+            float currentSpeed = KILLER_BASE_SPEED * timeSpeedMult * speedMult;
+            DrawText(TextFormat("Killer Speed: %.0f (time:%.2fx state:%.1fx)", currentSpeed, timeSpeedMult, speedMult), 10, 530, 16, GRAY);
 
             // Show killer state
             const char* stateNames[] = {"NORMAL", "HUNT", "SEARCH"};
