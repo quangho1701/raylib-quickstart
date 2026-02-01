@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MechanicsPlan>
+    <Phase number="4.3-5" name="Flashlight &amp; Killer AI Update">
+        <Description>Final logic implementation focusing on the Flashlight, Compass, and Killer AI state machine.</Description>
+        
+        <Mechanics>
+            <Visuals>
+                <RenderTexture>Use RenderTexture for Darkness overlay.</RenderTexture>
+                <AlwaysVisible>Small circle around Player (Radius 40) is always visible (clear/transparent in darkness texture).</AlwaysVisible>
+                <Flashlight>
+                    <Shape>Large circle (Radius 200) around Mouse Cursor.</Shape>
+                    <Condition>Visible ONLY when IsMouseButtonDown(MOUSE_LEFT_BUTTON).</Condition>
+                </Flashlight>
+            </Visuals>
+            
+            <Compass>
+                <Description>Draw an arrow at the Mouse Cursor pointing to the Exit Zone.</Description>
+                <Condition>Visible ONLY when Flashlight is ON (IsMouseButtonDown(MOUSE_LEFT_BUTTON)).</Condition>
+            </Compass>
+        </Mechanics>
+        
+        <KillerAI>
+            <Description>Crucial AI update introducing HUNT and SEARCH states based on Flashlight usage.</Description>
+            
+            <State name="HUNT">
+                <Condition>Flashlight is ON (Player holds Mouse).</Condition>
+                <Behavior>Killer knows Player position perfectly.</Behavior>
+                <SpeedRamp>
+                    <Stage time="1s">Speed x1.5</Stage>
+                    <Stage time="2s">Speed x2.0</Stage>
+                    <Stage time="3s">Speed x3.0</Stage>
+                </SpeedRamp>
+            </State>
+            
+            <State name="SEARCH">
+                <Condition>Flashlight Just Turned OFF (Player releases Mouse).</Condition>
+                <Behavior>
+                    <Action>Save the lastKnownPos of the Player.</Action>
+                    <Movement>Killer moves at Fast Speed (x1.5) towards lastKnownPos.</Movement>
+                    <Transition>Once Killer reaches lastKnownPos, switch to normal speed (Wander/Patrol).</Transition>
+                </Behavior>
+            </State>
+        </KillerAI>
+    </Phase>
+</MechanicsPlan>

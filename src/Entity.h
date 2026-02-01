@@ -11,6 +11,13 @@ enum EntityType {
     ENTITY_EXIT_DOOR
 };
 
+// Killer AI states
+enum KillerState {
+    KILLER_STATE_NORMAL = 0,
+    KILLER_STATE_HUNT,
+    KILLER_STATE_SEARCH
+};
+
 struct Entity {
     Vector2 pos;
     Vector2 velocity;

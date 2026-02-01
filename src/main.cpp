@@ -135,19 +135,117 @@ void UpdateNPCs(GameState& state, float deltaTime) {
     }
 }
 
-// Update Killer tracking behavior with Panic Mode
+// Update flashlight state based on mouse input
+void UpdateFlashlight(GameState& state) {
+    // Store previous state for edge detection
+    state.killerAI.wasFlashlightOn = state.flashlightOn;
+
+    // Update flashlight state
+    state.flashlightOn = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+
+    // Update mouse world position
+    state.mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), state.camera);
+}
+
+// Get killer speed multiplier based on current AI state
+float GetKillerSpeedMultiplier(GameState& state) {
+    KillerAIState& ai = state.killerAI;
+
+    switch (ai.state) {
+        case KILLER_STATE_HUNT:
+            // Speed ramps up over time while flashlight is on
+            if (ai.flashlightOnTime >= 3.0f) {
+                return KILLER_HUNT_SPEED_3S;  // 3x after 3 seconds
+            } else if (ai.flashlightOnTime >= 2.0f) {
+                return KILLER_HUNT_SPEED_2S;  // 2x after 2 seconds
+            } else if (ai.flashlightOnTime >= 1.0f) {
+                return KILLER_HUNT_SPEED_1S;  // 1.5x after 1 second
+            }
+            return 1.0f;  // Normal speed for first second
+
+        case KILLER_STATE_SEARCH:
+            return KILLER_SEARCH_SPEED;  // 1.5x during search
+
+        case KILLER_STATE_NORMAL:
+        default:
+            return 1.0f;  // Normal speed
+    }
+}
+
+// Update Killer AI state machine
+void UpdateKillerAI(GameState& state, float deltaTime) {
+    KillerAIState& ai = state.killerAI;
+    Entity* player = GetPlayer(state);
+
+    if (!player) return;
+
+    // Detect flashlight state changes
+    bool flashlightJustTurnedOn = state.flashlightOn && !ai.wasFlashlightOn;
+    bool flashlightJustTurnedOff = !state.flashlightOn && ai.wasFlashlightOn;
+
+    // State transitions
+    if (flashlightJustTurnedOn) {
+        // Transition to HUNT
+        ai.state = KILLER_STATE_HUNT;
+        ai.flashlightOnTime = 0.0f;
+    }
+    else if (flashlightJustTurnedOff && ai.state == KILLER_STATE_HUNT) {
+        // Transition to SEARCH
+        ai.state = KILLER_STATE_SEARCH;
+        ai.lastKnownPlayerPos = player->pos;  // Remember where player was
+    }
+
+    // Update flashlight timer while in HUNT state
+    if (ai.state == KILLER_STATE_HUNT && state.flashlightOn) {
+        ai.flashlightOnTime += deltaTime;
+    }
+}
+
+// Update Killer movement based on AI state
 void UpdateKiller(GameState& state, float deltaTime) {
     Entity* killer = GetKiller(state);
     Entity* player = GetPlayer(state);
     if (!killer || !player || !killer->active || !player->active) return;
 
-    // Calculate direction from killer to player
-    Vector2 direction = DirectionTo(killer->pos, player->pos);
+    KillerAIState& ai = state.killerAI;
 
-    // Panic Mode: killer speed increases as timer decreases
-    // Speed formula: baseSpeed + (1 - timer/maxTimer) * bonusSpeed
+    // First, update the AI state machine
+    UpdateKillerAI(state, deltaTime);
+
+    // Determine target position based on state
+    Vector2 targetPos;
+    switch (ai.state) {
+        case KILLER_STATE_HUNT:
+            // Killer knows exact player position
+            targetPos = player->pos;
+            break;
+
+        case KILLER_STATE_SEARCH:
+            // Move to last known position
+            targetPos = ai.lastKnownPlayerPos;
+
+            // Check if killer has arrived at last known position
+            if (Distance(killer->pos, ai.lastKnownPlayerPos) < KILLER_SEARCH_ARRIVAL_THRESHOLD) {
+                // Transition to NORMAL
+                ai.state = KILLER_STATE_NORMAL;
+            }
+            break;
+
+        case KILLER_STATE_NORMAL:
+        default:
+            // Original behavior: move toward player (slower tracking)
+            targetPos = player->pos;
+            break;
+    }
+
+    // Calculate direction to target
+    Vector2 direction = DirectionTo(killer->pos, targetPos);
+
+    // Calculate speed with panic factor AND state multiplier
     float panicFactor = 1.0f - (state.timer / GAME_MAX_TIME);
-    float currentSpeed = KILLER_BASE_SPEED + (panicFactor * KILLER_BONUS_SPEED);
+    float baseSpeed = KILLER_BASE_SPEED + (panicFactor * KILLER_BONUS_SPEED);
+    float speedMultiplier = GetKillerSpeedMultiplier(state);
+    float currentSpeed = baseSpeed * speedMultiplier;
 
     // Apply velocity
     killer->velocity.x = direction.x * currentSpeed;
@@ -358,6 +456,90 @@ void DrawWorld() {
     }
 }
 
+// Draw darkness overlay with visibility holes for player and flashlight
+void DrawDarknessOverlay(GameState& state) {
+    Entity* player = GetPlayer(state);
+    if (!player || !state.darknessTextureInitialized) return;
+
+    // Begin drawing to the darkness texture
+    BeginTextureMode(state.darknessTexture);
+
+    // Fill with dark color
+    ClearBackground({0, 0, 0, DARKNESS_ALPHA});
+
+    // Calculate player position in screen coordinates
+    Vector2 playerScreenPos = GetWorldToScreen2D(player->pos, state.camera);
+
+    // Cut holes using blend mode - draw transparent circles
+    BeginBlendMode(BLEND_SUBTRACT_COLORS);
+
+    // Always visible area around player (radius 40)
+    DrawCircle((int)playerScreenPos.x, (int)playerScreenPos.y,
+               PLAYER_VISIBILITY_RADIUS, {0, 0, 0, 255});
+
+    // If flashlight is on, cut a larger hole at mouse position
+    if (state.flashlightOn) {
+        Vector2 mouseScreenPos = GetMousePosition();
+        DrawCircle((int)mouseScreenPos.x, (int)mouseScreenPos.y,
+                   FLASHLIGHT_RADIUS, {0, 0, 0, 255});
+    }
+
+    EndBlendMode();
+    EndTextureMode();
+
+    // Draw the darkness texture over the game
+    // Note: RenderTexture is flipped vertically in raylib, so we use negative height
+    DrawTextureRec(state.darknessTexture.texture,
+                   {0, 0, 800, -600},
+                   {0, 0},
+                   WHITE);
+}
+
+// Draw compass arrow at mouse cursor pointing to exit
+void DrawCompassArrow(GameState& state) {
+    if (!state.flashlightOn) return;  // Only visible when flashlight is on
+
+    Entity* exitDoor = GetExitDoor(state);
+    if (!exitDoor) return;
+
+    // Get mouse screen position
+    Vector2 mouseScreenPos = GetMousePosition();
+
+    // Calculate direction from mouse (world) to exit (world)
+    Vector2 direction = DirectionTo(state.mouseWorldPos, exitDoor->pos);
+
+    // Arrow parameters
+    float arrowLength = 30.0f;
+    float arrowHeadSize = 10.0f;
+
+    // Calculate arrow tip (pointing toward exit)
+    Vector2 arrowTip = {
+        mouseScreenPos.x + direction.x * arrowLength,
+        mouseScreenPos.y + direction.y * arrowLength
+    };
+
+    // Calculate arrowhead points
+    float angle = atan2f(direction.y, direction.x);
+    float headAngle1 = angle + 2.5f;  // ~143 degrees offset
+    float headAngle2 = angle - 2.5f;
+
+    Vector2 headPoint1 = {
+        arrowTip.x - cosf(headAngle1) * arrowHeadSize,
+        arrowTip.y - sinf(headAngle1) * arrowHeadSize
+    };
+    Vector2 headPoint2 = {
+        arrowTip.x - cosf(headAngle2) * arrowHeadSize,
+        arrowTip.y - sinf(headAngle2) * arrowHeadSize
+    };
+
+    // Draw arrow shaft
+    DrawLineEx(mouseScreenPos, arrowTip, 3.0f, DARKGREEN);
+
+    // Draw arrowhead
+    DrawLineEx(arrowTip, headPoint1, 3.0f, DARKGREEN);
+    DrawLineEx(arrowTip, headPoint2, 3.0f, DARKGREEN);
+}
+
 int main() {
     InitWindow(800, 600, "Masquerade Panic");
     SetTargetFPS(60);
@@ -366,11 +548,16 @@ int main() {
     GameState state = CreateGameState();
     InitGame(state);
 
+    // Initialize darkness render texture (must be after InitWindow)
+    state.darknessTexture = LoadRenderTexture(800, 600);
+    state.darknessTextureInitialized = true;
+
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
 
         // Update game logic (only if game is still running)
         if (!state.gameOver && !state.gameWon) {
+            UpdateFlashlight(state);
             UpdatePlayer(state, deltaTime);
             UpdateNPCs(state, deltaTime);
             UpdateKiller(state, deltaTime);
@@ -391,6 +578,12 @@ int main() {
 
         EndMode2D();
 
+        // Draw darkness overlay (screen space, covers everything)
+        DrawDarknessOverlay(state);
+
+        // Draw compass arrow (screen space, on top of darkness)
+        DrawCompassArrow(state);
+
         // UI overlay - Timer display
         Entity* killer = GetKiller(state);
         float panicFactor = 1.0f - (state.timer / GAME_MAX_TIME);
@@ -399,10 +592,25 @@ int main() {
         // Debug info
         DrawText(TextFormat("Entities: %d", (int)state.entities.size()), 10, 10, 16, GRAY);
         if (killer) {
-            DrawText(TextFormat("Killer Speed: %.0f", KILLER_BASE_SPEED + panicFactor * KILLER_BONUS_SPEED), 10, 30, 16, GRAY);
+            float speedMult = GetKillerSpeedMultiplier(state);
+            float currentSpeed = (KILLER_BASE_SPEED + panicFactor * KILLER_BONUS_SPEED) * speedMult;
+            DrawText(TextFormat("Killer Speed: %.0f (x%.1f)", currentSpeed, speedMult), 10, 30, 16, GRAY);
+
+            // Show killer state
+            const char* stateNames[] = {"NORMAL", "HUNT", "SEARCH"};
+            DrawText(TextFormat("Killer State: %s", stateNames[state.killerAI.state]), 10, 50, 16, GRAY);
         }
 
+        // Flashlight indicator
+        DrawText(state.flashlightOn ? "FLASHLIGHT: ON" : "FLASHLIGHT: OFF", 10, 70, 16,
+                 state.flashlightOn ? RED : GRAY);
+
         EndDrawing();
+    }
+
+    // Clean up render texture
+    if (state.darknessTextureInitialized) {
+        UnloadRenderTexture(state.darknessTexture);
     }
 
     CloseWindow();

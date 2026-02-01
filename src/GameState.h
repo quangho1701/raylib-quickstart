@@ -29,6 +29,26 @@ const float EXIT_DOOR_MIN_SPAWN_DISTANCE = 800.0f;
 // Game timer
 const float GAME_MAX_TIME = 30.0f;
 
+// Flashlight/Darkness constants
+const float PLAYER_VISIBILITY_RADIUS = 40.0f;
+const float FLASHLIGHT_RADIUS = 200.0f;
+const unsigned char DARKNESS_ALPHA = 230;
+
+// Killer AI state constants
+const float KILLER_HUNT_SPEED_1S = 1.5f;
+const float KILLER_HUNT_SPEED_2S = 2.0f;
+const float KILLER_HUNT_SPEED_3S = 3.0f;
+const float KILLER_SEARCH_SPEED = 1.5f;
+const float KILLER_SEARCH_ARRIVAL_THRESHOLD = 20.0f;
+
+// Killer AI state tracking
+struct KillerAIState {
+    KillerState state;
+    Vector2 lastKnownPlayerPos;
+    float flashlightOnTime;
+    bool wasFlashlightOn;
+};
+
 struct GameState {
     float timer;
     bool gameOver;
@@ -42,6 +62,17 @@ struct GameState {
     int playerIndex;
     int killerIndex;
     int exitDoorIndex;
+
+    // Flashlight state
+    bool flashlightOn;
+    Vector2 mouseWorldPos;
+
+    // Killer AI state
+    KillerAIState killerAI;
+
+    // Darkness render texture
+    RenderTexture2D darknessTexture;
+    bool darknessTextureInitialized;
 };
 
 // Initialize a new game state with default values
@@ -59,6 +90,19 @@ inline GameState CreateGameState() {
     state.camera.offset = {400.0f, 300.0f};  // Center of 800x600 window
     state.camera.rotation = 0.0f;
     state.camera.zoom = 1.0f;
+
+    // Initialize flashlight state
+    state.flashlightOn = false;
+    state.mouseWorldPos = {0.0f, 0.0f};
+
+    // Initialize killer AI state
+    state.killerAI.state = KILLER_STATE_NORMAL;
+    state.killerAI.lastKnownPlayerPos = {0.0f, 0.0f};
+    state.killerAI.flashlightOnTime = 0.0f;
+    state.killerAI.wasFlashlightOn = false;
+
+    // Darkness texture will be initialized in main after window creation
+    state.darknessTextureInitialized = false;
 
     return state;
 }
