@@ -20,7 +20,8 @@
       "Bash(\"$WINLIBS_PATH/cmake.exe\" -G \"Ninja\" -DCMAKE_C_COMPILER=\"$WINLIBS_PATH/gcc.exe\" -DCMAKE_CXX_COMPILER=\"$WINLIBS_PATH/g++.exe\" -DCMAKE_MAKE_PROGRAM=\"$WINLIBS_PATH/ninja.exe\" -S . -B build)",
       "Bash(\"$WINLIBS_PATH/cmake.exe\" --build build)",
       "Bash(.buildmy-awesome-game.exe)",
-      "Bash(build/my-awesome-game.exe)"
+      "Bash(build/my-awesome-game.exe)",
+      "Bash(./masquerade-panic.exe)"
     ]
   }
 }

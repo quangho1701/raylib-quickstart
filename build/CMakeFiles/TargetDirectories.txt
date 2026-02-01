@@ -1,4 +1,4 @@
-D:/my-awesome-game/build/CMakeFiles/my-awesome-game.dir
+D:/my-awesome-game/build/CMakeFiles/masquerade-panic.dir
 D:/my-awesome-game/build/CMakeFiles/package.dir
 D:/my-awesome-game/build/CMakeFiles/package_source.dir
 D:/my-awesome-game/build/CMakeFiles/edit_cache.dir

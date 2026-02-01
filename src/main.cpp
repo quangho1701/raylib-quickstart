@@ -1,7 +1,7 @@
 #include "raylib.h"
 
 int main() {
-    InitWindow(800, 600, "My Awesome Game");
+    InitWindow(800, 600, "Masquerade Panic");
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
