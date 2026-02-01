@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProjectParameters>
+    <ProjectName>Masquerade Panic</ProjectName>
+    <Theme>Mask</Theme>
+    <Genre>Top-down Survival / Hidden Role / Horror</Genre>
+    <VisualStyle>Diary of a Wimpy Kid aesthetic (Hand-drawn stick figures, Black lines on White paper background)</VisualStyle>
+    <Platform>Windows (built via C++ &amp; Raylib on WSL/MinGW)</Platform>
+
+    <ProductOverview>
+        <Vision>A tension-filled, short-session survival game that relies on visual confusion and limited visibility. It plays on the fear of "who is watching me in the crowd."</Vision>
+        <TargetAudience>Game Jam judges, streamers, and players who enjoy high-stakes, quick-reaction games (e.g., Super Hexagon, FNAF minigames).</TargetAudience>
+        <KeyGoals>
+            <Goal>Deliver a playable build in &lt; 6 hours.</Goal>
+            <Goal>Achieve a distinct "hand-drawn doodle" art style using only code (primitives), no external assets.</Goal>
+            <Goal>Implement smooth performance with 50+ entities.</Goal>
+        </KeyGoals>
+    </ProductOverview>
+
+    <FileStructureAndNaming>
+        <RepositoryOrganization>
+            <Status>Planned - Currently only main.cpp exists as a starter template</Status>
+            <Structure>
+/
+├── CMakeLists.txt       # Build configuration (FetchContent for Raylib)
+├── assets/              # (Empty/Minimal) - All art is procedural
+├── src/
+│   ├── main.cpp         # Entry point, Game Loop, Layout
+│   ├── Entity.h         # Struct definitions for Player, NPC, Killer (TODO)
+│   ├── GameState.h      # Global state management (timers, game over flags) (TODO)
+│   └── Utils.h          # Math helpers, collision shortcuts (TODO)
+└── README.md
+            </Structure>
+            <Note>Update CMakeLists.txt project name from "my-awesome-game" to "masquerade-panic" before release.</Note>
+        </RepositoryOrganization>
+        <NamingConventions>
+            <Item type="Files">PascalCase (e.g., GameState.h, Entity.cpp)</Item>
+            <Item type="ClassesStructs">PascalCase (e.g., struct Entity, class MaskManager)</Item>
+            <Item type="Variables">camelCase (e.g., playerPos, isGameRunning)</Item>
+            <Item type="Constants">SCREAMING_SNAKE_CASE (e.g., MAX_NPCS, WINDOW_WIDTH)</Item>
+            <Item type="Functions">PascalCase to match Raylib style (e.g., UpdatePlayer(), DrawScene())</Item>
+        </NamingConventions>
+    </FileStructureAndNaming>
+
+    <UIDesignAndVisuals>
+        <Aesthetic name="Sketchbook Horror">
+            <Background>RAYWHITE (Paper texture feel)</Background>
+            <Lines>All drawings use BLACK with varying thickness. No complex gradients.</Lines>
+        </Aesthetic>
+        <Entities>
+            <Entity name="Player">A stick figure (Circle head, line body) drawn with DrawCircleLines and DrawLineEx.</Entity>
+            <Entity name="Guests (NPCs)">Stick figures wearing a White Rectangle (Mask) over their face with a black border (DrawRectangleLines).</Entity>
+            <Entity name="The Killer">A stick figure with NO MASK. Instead, has a drawn "Creepy Smile" (arc lines) on the face.</Entity>
+        </Entities>
+        <HUD name="The Darkness">
+            <Overlay>A full-screen Black overlay (DrawRectangle(0,0,w,h, Fade(BLACK, 0.95f))).</Overlay>
+            <FlashlightEffect>
+                A transparent circular "hole" centered on the Player.
+                Implementation: Use a RenderTexture as a mask. Draw white circle at player position on the mask texture, then blend it with the darkness overlay using BLEND_MULTIPLIED. This creates a true transparency effect rather than color subtraction.
+            </FlashlightEffect>
+            <Timer>A battery-bar style indicator at the top center, dropping down by time (e.g., "SURVIVE: 15.4s").</Timer>
+        </HUD>
+    </UIDesignAndVisuals>
+
+    <KeyFeaturesAndUserFlow>
+        <Step number="1" name="The Setup">
+            <Action>Player spawns in the center of a 2000x2000 map.</Action>
+            <Action>50 NPCs spawn randomly around the map.</Action>
+            <Action>1 Killer spawns at a medium distance (min distance > 400px from player).</Action>
+            <Action>Exit Door spawns at a random edge of the map (green rectangle, 100x150px).</Action>
+        </Step>
+        <Step number="2" name="The Blackout">
+            <Action>Game starts immediately. Screen goes dark. Flashlight activates.</Action>
+            <Action>Camera locks onto Player with smooth damping (camera.target = Vector2Lerp(...)). Clamp camera to map bounds to prevent showing void.</Action>
+        </Step>
+        <Step number="3" name="The Hunt (Loop)">
+            <PlayerInput>WASD to move (run). Mouse to aim flashlight (optional, or flashlight just surrounds player).</PlayerInput>
+            <NPCLogic>Wander randomly. Change direction every 1-3 seconds (randomized per NPC). Speed: 30-60 px/sec. New direction = random angle 0-360°.</NPCLogic>
+            <KillerLogic>Calculate vector to Player -> Move slowly towards Player. Speed increases slightly as timer drops (Panic Mode).</KillerLogic>
+        </Step>
+        <Step number="4" name="End Conditions">
+            <Loss>Distance(Player, Killer) &lt; CollisionRadius -> Jumpscare Screen (Zoom in on Killer face).</Loss>
+            <Win>Timer reaches 0.0s OR Player touches Green "Exit Door" rect.</Win>
+            <Restart>Press SPACE or ENTER to restart after 2 second delay. Resets all positions and timer.</Restart>
+        </Step>
+    </KeyFeaturesAndUserFlow>
+
+    <BackendArchitecture>
+        <TechStack>C++17, Raylib 5.0 (via CMake FetchContent)</TechStack>
+        <DataStructures>
+            <CodeSnippet>
+struct Entity {
+    Vector2 pos;
+    Vector2 velocity;
+    bool isKiller;
+    bool hasMask;
+    float wanderTimer; // For NPCs to change direction
+};
+extern std::vector&lt;Entity&gt; crowd;
+            </CodeSnippet>
+        </DataStructures>
+        <CoreLoop>
+            <Step>InitWindow() (InitAudioDevice() only if audio is implemented)</Step>
+            <Step>LoadGame(): Reset positions, randomize logic</Step>
+            <Step>
+                while (!WindowShouldClose()):
+                - Update(): Handle Input, Move Entitites, Check Collisions
+                - Draw(): BeginMode2D(camera) -> Draw World -> EndMode2D() -> Draw Flashlight Mask (RenderTexture with white circle at player pos, blended with darkness via BLEND_MULTIPLIED) -> Draw HUD.
+            </Step>
+        </CoreLoop>
+        <Performance>
+            <Optimization>Limit collision checks: Only check Player vs. Killer (O(1)) and Player vs. Walls. Do not check NPC vs. NPC to save cycles.</Optimization>
+        </Performance>
+    </BackendArchitecture>
+
+    <Constraints>
+        <Time>Must be playable within 6 hours.</Time>
+        <Audio>Minimal. One looping background "heartbeat" sound (synthesized if possible, or loaded later).</Audio>
+        <Platform>Single-player, Offline, Local Build (Windows Main Target).</Platform>
+    </Constraints>
+
+    <SecurityAndStability>
+        <MemoryManagement>Strictly scoped vectors. Avoid raw pointers (new/delete); use stack allocation or smart pointers where possible.</MemoryManagement>
+        <InputHandling>Debounce restart key to prevent accidental resets.</InputHandling>
+        <CrashPrevention>Ensure crowd vector access is bounds-checked.</CrashPrevention>
+    </SecurityAndStability>
+</ProjectParameters>

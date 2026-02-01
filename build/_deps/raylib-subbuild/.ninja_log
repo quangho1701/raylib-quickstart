@@ -1,0 +1,21 @@
+# ninja log v7
+2	73	7916213186028778	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-mkdir	474f2d7a54e41d04
+2	73	7916213186028778	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-mkdir	474f2d7a54e41d04
+73	52171	7916213707050833	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-download	dcf9ef3a6a2479f6
+73	52171	7916213707050833	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-download	dcf9ef3a6a2479f6
+52171	52301	7916213707118993	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-update	b39dd14ec8c9265e
+52171	52301	7916213707118993	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-update	b39dd14ec8c9265e
+52301	52377	7916213709098816	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-patch	7eb431873f8d4224
+52301	52377	7916213709098816	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-patch	7eb431873f8d4224
+52377	52449	7916213709812605	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-configure	44e5aa2c81ae0e87
+52377	52449	7916213709812605	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-configure	44e5aa2c81ae0e87
+52450	52526	7916213710597733	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-build	1ee4394b40f5de8f
+52450	52526	7916213710597733	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-build	1ee4394b40f5de8f
+52526	52599	7916213711315553	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-install	1b5a0076a484c4c3
+52526	52599	7916213711315553	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-install	1b5a0076a484c4c3
+52599	52678	7916213712100630	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-test	e8e751ddcb8f1fde
+52599	52678	7916213712100630	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-test	e8e751ddcb8f1fde
+52678	52774	7916213713076359	CMakeFiles/raylib-populate-complete	a96a49f22e3393e0
+52678	52774	7916213713076359	raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-done	a96a49f22e3393e0
+52678	52774	7916213713076359	D:/my-awesome-game/build/_deps/raylib-subbuild/CMakeFiles/raylib-populate-complete	a96a49f22e3393e0
+52678	52774	7916213713076359	D:/my-awesome-game/build/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/raylib-populate-done	a96a49f22e3393e0

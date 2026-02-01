@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ImplementationPlan>
+    <PlanOverview>
+        <ProjectName>Masquerade Panic</ProjectName>
+        <Goal>Rapid prototype playable build of a survival horror game.</Goal>
+        <Timeline>6 Hours</Timeline>
+        <TechStack>C++, Raylib 5.0, CMake</TechStack>
+    </PlanOverview>
+
+    <Phase number="1" name="Project Initialization" priority="High">
+        <Description>Setup the build environment and basic windowing system.</Description>
+        <Steps>
+            <Step id="1.1">
+                <Action>Create CMakeLists.txt</Action>
+                <Details>Configure CMake to FetchContent Raylib 5.0. Ensure C++17 standard.</Details>
+            </Step>
+            <Step id="1.2">
+                <Action>Set up Directory Structure</Action>
+                <Details>Create `src/` for source code and `assets/` (empty for now). Update CMake project name from "my-awesome-game" to "masquerade-panic".</Details>
+            </Step>
+            <Step id="1.3">
+                <Action>Initialize main.cpp</Action>
+                <Details>Create entry point with `InitWindow(800, 600)`, `SetTargetFPS(60)`, and the main `while(!WindowShouldClose())` loop.</Details>
+            </Step>
+        </Steps>
+    </Phase>
+
+    <Phase number="2" name="Core Data &amp; Player Movement" priority="High">
+        <Description>Define the data structures and implement basic player control.</Description>
+        <Steps>
+            <Step id="2.1">
+                <Action>Create src/Entity.h</Action>
+                <Details>Define `struct Entity` with properties: `Vector2 pos`, `Vector2 velocity`, `int type` (PLAYER, NPC, KILLER), `bool active`, `bool hasMask`, `float wanderTimer`. NPCs have masks, Player and Killer do not.</Details>
+            </Step>
+            <Step id="2.1b">
+                <Action>Create src/Utils.h</Action>
+                <Details>Math helpers and collision shortcuts (e.g., Vector2Normalize, distance calculations, collision wrappers).</Details>
+            </Step>
+            <Step id="2.2">
+                <Action>Create src/GameState.h</Action>
+                <Details>Define `struct GameState` to track: `float timer`, `bool gameOver`, `bool gameWon`, `std::vector&lt;Entity&gt; entities`.</Details>
+            </Step>
+            <Step id="2.3">
+                <Action>Implement Player Logic</Action>
+                <Details>In `Update()`, map WASD keys to Player velocity. Apply position updates (delta time). Constrain Player to map bounds (0,0 to 2000,2000).</Details>
+            </Step>
+            <Step id="2.4">
+                <Action>Implement Camera System</Action>
+                <Details>Setup `Camera2D`. In `Update()`, set `camera.target` to Player position with simple lerp smoothing. Clamp camera target so visual area stays within map bounds.</Details>
+            </Step>
+        </Steps>
+    </Phase>
+
+    <Phase number="3" name="AI Behaviors &amp; Spawning" priority="Medium">
+        <Description>Populate the world and add behavior to NPCs and the Killer.</Description>
+        <Steps>
+            <Step id="3.1">
+                <Action>Implement Spawning System</Action>
+                <Details>Create `InitGame()` function. Spawn 1 Player (Center), 50 NPCs (Random), 1 Killer (Random > 400px away), 1 Exit Door (Random Edge).</Details>
+            </Step>
+            <Step id="3.2">
+                <Action>Implement NPC Wander Logic</Action>
+                <Details>Iterate through `entities`. If type is NPC: decrease `wanderTimer`. When 0, pick random velocity vector, reset timer (1-3s). Move entity.</Details>
+            </Step>
+            <Step id="3.3">
+                <Action>Implement Killer Tracking Logic</Action>
+                <Details>If type is KILLER: Calculate vector `PlayerPos - KillerPos`. Normalize and multiply by speed. Move entity. Implement "Panic Mode": killer speed increases slightly as timer drops (e.g., baseSpeed + (1 - timer/maxTimer) * bonusSpeed).</Details>
+            </Step>
+        </Steps>
+    </Phase>
+
+    <Phase number="4" name="Aesthetic &amp; Rendering" priority="High">
+        <Description>Implement the "Sketchbook Horror" visual style and lighting.</Description>
+        <Steps>
+            <Step id="4.1">
+                <Action>Implement Entity Drawing</Action>
+                <Details>
+                    - Player: `DrawCircleLines` (Head), `DrawLine` (Body/Limbs).
+                    - NPC: Similar to Player + `DrawRectangleLines` (Mask) over face.
+                    - Killer: Similar to Player + `DrawLineBezier` (Smile).
+                    - All lines BLACK.
+                </Details>
+            </Step>
+            <Step id="4.2">
+                <Action>Implement Background</Action>
+                <Details>Clear background with `RAYWHITE` to simulate paper.</Details>
+            </Step>
+            <Step id="4.3">
+                <Action>Implement Flashlight/Darkness</Action>
+                <Details>
+                    1. Create a `RenderTexture2D` matching screen size.
+                    2. `BeginTextureMode`.
+                    3. Clear BLANK. Draw full screen Black Rectangle (alpha 0.95).
+                    4. Draw Circle (White/Transparent) at Player Screen Position using `BLEND_MULTIPLIED` to cut a hole.
+                    5. `EndTextureMode`.
+                    6. Draw texture over the screen after drawing the world.
+                </Details>
+            </Step>
+        </Steps>
+    </Phase>
+
+    <Phase number="5" name="Game Loop &amp; Polish" priority="Medium">
+        <Description>Win/Loss conditions and UI.</Description>
+        <Steps>
+            <Step id="5.1">
+                <Action>Collision Detection</Action>
+                <Details>Check `CheckCollisionCircles(PlayerPos, KillerPos)` -> Set `gameOver = true`, trigger jumpscare. Check `CheckCollisionRecs(PlayerRect, ExitRect)` -> Set `gameWon = true`. Exit door is green, 100x150px.</Details>
+            </Step>
+            <Step id="5.1b">
+                <Action>Implement Jumpscare</Action>
+                <Details>On loss: zoom camera in on Killer face briefly before showing game over screen.</Details>
+            </Step>
+            <Step id="5.2">
+                <Action>Timer Logic</Action>
+                <Details>Decrement `gameTimer`. If &lt;= 0, Set `gameWon = true`.</Details>
+            </Step>
+            <Step id="5.3">
+                <Action>UI Overlay</Action>
+                <Details>Draw Timer bar at top center with text (e.g., "SURVIVE: 15.4s"). If `gameOver` or `gameWon`, draw overlay message (DrawText) and after 2 second delay, listen for `IsKeyPressed(KEY_ENTER)` or `IsKeyPressed(KEY_SPACE)` to call `InitGame()`. Debounce restart keys to prevent accidental resets.</Details>
+            </Step>
+        </Steps>
+    </Phase>
+
+    <Phase number="6" name="Audio" priority="Low">
+        <Description>Add minimal audio for atmosphere.</Description>
+        <Steps>
+            <Step id="6.1">
+                <Action>Add Heartbeat Loop</Action>
+                <Details>Call `InitAudioDevice()` at startup. Load or synthesize a looping heartbeat sound. Play during gameplay to build tension.</Details>
+            </Step>
+        </Steps>
+    </Phase>
+</ImplementationPlan>

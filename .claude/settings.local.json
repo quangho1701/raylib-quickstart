@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake:*)",
+      "Bash(cmd.exe /c \"cmake -S . -B build\")",
+      "Bash(where.exe:*)",
+      "Bash(echo:*)",
+      "Bash(pacman:*)",
+      "Bash(cmake.exe --version:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe\" --version)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe\" --version)",
+      "Bash(winget.exe:*)",
+      "Bash(choco.exe --version:*)",
+      "Bash(\"/c/Program Files/CMake/bin/cmake.exe\" -S . -B build)",
+      "Bash(\"/c/Program Files/CMake/bin/cmake.exe\":*)",
+      "Bash(\"/c/Program Files/CMake/bin/cmake.exe\" -G \"MinGW Makefiles\" -S . -B build)",
+      "Bash(cmd.exe /c \"where cmake\")",
+      "Bash(ls:*)",
+      "Bash(WINLIBS_PATH=\"/c/Users/Admin/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin\")",
+      "Bash(\"$WINLIBS_PATH/cmake.exe\" -G \"Ninja\" -DCMAKE_C_COMPILER=\"$WINLIBS_PATH/gcc.exe\" -DCMAKE_CXX_COMPILER=\"$WINLIBS_PATH/g++.exe\" -DCMAKE_MAKE_PROGRAM=\"$WINLIBS_PATH/ninja.exe\" -S . -B build)",
+      "Bash(\"$WINLIBS_PATH/cmake.exe\" --build build)",
+      "Bash(.buildmy-awesome-game.exe)",
+      "Bash(build/my-awesome-game.exe)"
+    ]
+  }
+}
