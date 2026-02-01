@@ -22,8 +22,9 @@ const float KILLER_BONUS_SPEED = 50.0f;  // Added to base speed as timer decreas
 const float KILLER_MIN_SPAWN_DISTANCE = 400.0f;
 
 // Exit door constants
-const float EXIT_DOOR_WIDTH = 100.0f;
-const float EXIT_DOOR_HEIGHT = 150.0f;
+const float EXIT_DOOR_WIDTH = 60.0f;
+const float EXIT_DOOR_HEIGHT = 100.0f;
+const float EXIT_DOOR_MIN_SPAWN_DISTANCE = 800.0f;
 
 // Game timer
 const float GAME_MAX_TIME = 30.0f;

@@ -37,8 +37,12 @@ void InitGame(GameState& state) {
     state.entities.push_back(killer);
     state.killerIndex = (int)state.entities.size() - 1;
 
-    // Spawn Exit Door at random edge
-    Vector2 exitPos = RandomEdgePosition(MAP_WIDTH, MAP_HEIGHT, EXIT_DOOR_WIDTH, EXIT_DOOR_HEIGHT);
+    // Spawn Exit Door at random edge, but far enough from player
+    Vector2 exitPos;
+    do {
+        exitPos = RandomEdgePosition(MAP_WIDTH, MAP_HEIGHT, EXIT_DOOR_WIDTH, EXIT_DOOR_HEIGHT);
+    } while (Distance(exitPos, playerPos) < EXIT_DOOR_MIN_SPAWN_DISTANCE);
+
     Entity exitDoor = CreateEntity(exitPos, ENTITY_EXIT_DOOR);
     state.entities.push_back(exitDoor);
     state.exitDoorIndex = (int)state.entities.size() - 1;
@@ -241,11 +245,11 @@ void DrawExitDoor(Entity& door) {
     };
     DrawRectangleLinesEx(doorRect, 3.0f, GREEN);
 
-    // Door knob
-    DrawCircle((int)(x + 35), (int)y, 5, GREEN);
+    // Door knob (positioned relative to smaller door)
+    DrawCircle((int)(x + 20), (int)y, 3, GREEN);
 
-    // "EXIT" text
-    DrawText("EXIT", (int)(x - 20), (int)(y - 10), 20, GREEN);
+    // "EXIT" text (smaller to fit the door)
+    DrawText("EXIT", (int)(x - 18), (int)(y - 8), 16, GREEN);
 }
 
 // Draw all entities
