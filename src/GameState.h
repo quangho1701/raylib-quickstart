@@ -32,6 +32,9 @@ const float GAME_MAX_TIME = 30.0f;
 // Flashlight/Darkness constants
 const float PLAYER_VISIBILITY_RADIUS = 40.0f;
 const float FLASHLIGHT_RADIUS = 200.0f;
+const float FLASHLIGHT_MIN_RADIUS = 80.0f;
+const float FLASHLIGHT_MAX_DURATION = 3.0f;
+const float FLASHLIGHT_COOLDOWN = 3.0f;
 const unsigned char DARKNESS_ALPHA = 230;
 
 // Killer AI state constants
@@ -77,6 +80,9 @@ struct GameState {
     // Flashlight state
     bool flashlightOn;
     Vector2 mouseWorldPos;
+    float flashlightUsageTime;
+    float flashlightCooldownTime;
+    bool flashlightAvailable;
 
     // Killer AI state
     KillerAIState killerAI;
@@ -114,6 +120,9 @@ inline GameState CreateGameState() {
     // Initialize flashlight state
     state.flashlightOn = false;
     state.mouseWorldPos = {0.0f, 0.0f};
+    state.flashlightUsageTime = 0.0f;
+    state.flashlightCooldownTime = 0.0f;
+    state.flashlightAvailable = true;
 
     // Initialize killer AI state
     state.killerAI.state = KILLER_STATE_NORMAL;

@@ -3,6 +3,7 @@
 #include "Entity.h"
 #include "GameState.h"
 #include "Utils.h"
+#include <cstdio>
 
 // Initialize/reset the game with all entities
 void InitGame(GameState& state) {
@@ -21,6 +22,12 @@ void InitGame(GameState& state) {
     // Reset restart state
     state.restartDelayTimer = 0.0f;
     state.canRestart = false;
+
+    // Reset flashlight state
+    state.flashlightOn = false;
+    state.flashlightUsageTime = 0.0f;
+    state.flashlightCooldownTime = 0.0f;
+    state.flashlightAvailable = true;
 
     // Spawn Player at center
     Vector2 playerPos = {MAP_WIDTH / 2.0f, MAP_HEIGHT / 2.0f};
@@ -145,13 +152,43 @@ void UpdateNPCs(GameState& state, float deltaTime) {
     }
 }
 
-// Update flashlight state based on mouse input
-void UpdateFlashlight(GameState& state) {
+// Update flashlight state based on mouse input with duration limit and cooldown
+void UpdateFlashlight(GameState& state, float deltaTime) {
     // Store previous state for edge detection
     state.killerAI.wasFlashlightOn = state.flashlightOn;
 
-    // Update flashlight state
-    state.flashlightOn = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+    // Update cooldown timer
+    if (state.flashlightCooldownTime > 0.0f) {
+        state.flashlightCooldownTime -= deltaTime;
+        if (state.flashlightCooldownTime <= 0.0f) {
+            state.flashlightCooldownTime = 0.0f;
+            state.flashlightAvailable = true;
+        }
+    }
+
+    bool wantFlashlight = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+
+    if (wantFlashlight && state.flashlightAvailable) {
+        // Player wants flashlight and it's available
+        state.flashlightOn = true;
+        state.flashlightUsageTime += deltaTime;
+
+        // Check if max duration reached
+        if (state.flashlightUsageTime >= FLASHLIGHT_MAX_DURATION) {
+            state.flashlightOn = false;
+            state.flashlightAvailable = false;
+            state.flashlightCooldownTime = FLASHLIGHT_COOLDOWN;
+            state.flashlightUsageTime = 0.0f;
+        }
+    } else if (!wantFlashlight && state.flashlightOn) {
+        // Player released flashlight -> start cooldown
+        state.flashlightOn = false;
+        state.flashlightAvailable = false;
+        state.flashlightCooldownTime = FLASHLIGHT_COOLDOWN;
+        state.flashlightUsageTime = 0.0f;
+    } else {
+        state.flashlightOn = false;
+    }
 
     // Update mouse world position
     state.mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), state.camera);
@@ -554,6 +591,12 @@ void DrawWorld() {
     }
 }
 
+// Calculate flashlight radius based on usage time (shrinks from 200 to 80 over 3 seconds)
+float GetFlashlightRadius(GameState& state) {
+    float t = state.flashlightUsageTime / FLASHLIGHT_MAX_DURATION;
+    return FLASHLIGHT_RADIUS - (FLASHLIGHT_RADIUS - FLASHLIGHT_MIN_RADIUS) * t;
+}
+
 // Draw darkness overlay with visibility holes for player and flashlight
 void DrawDarknessOverlay(GameState& state) {
     Entity* player = GetPlayer(state);
@@ -571,15 +614,19 @@ void DrawDarknessOverlay(GameState& state) {
     // Cut holes using blend mode - draw transparent circles
     BeginBlendMode(BLEND_SUBTRACT_COLORS);
 
-    // Always visible area around player (radius 40)
-    DrawCircle((int)playerScreenPos.x, (int)playerScreenPos.y,
-               PLAYER_VISIBILITY_RADIUS, {0, 0, 0, 255});
+    // Only draw player visibility circle when flashlight is OFF
+    // This fixes the black circle artifact when flashlight is on
+    if (!state.flashlightOn) {
+        DrawCircle((int)playerScreenPos.x, (int)playerScreenPos.y,
+                   PLAYER_VISIBILITY_RADIUS, {0, 0, 0, 255});
+    }
 
-    // If flashlight is on, cut a larger hole at mouse position
+    // If flashlight is on, cut a larger hole at mouse position with shrinking radius
     if (state.flashlightOn) {
         Vector2 mouseScreenPos = GetMousePosition();
+        float currentRadius = GetFlashlightRadius(state);
         DrawCircle((int)mouseScreenPos.x, (int)mouseScreenPos.y,
-                   FLASHLIGHT_RADIUS, {0, 0, 0, 255});
+                   currentRadius, {0, 0, 0, 255});
     }
 
     EndBlendMode();
@@ -743,7 +790,7 @@ int main() {
 
         // Update game logic (only if game is still running)
         if (!state.gameOver && !state.gameWon) {
-            UpdateFlashlight(state);
+            UpdateFlashlight(state, deltaTime);
             UpdatePlayer(state, deltaTime);
             UpdateNPCs(state, deltaTime);
             UpdateKiller(state, deltaTime);
@@ -803,9 +850,19 @@ int main() {
             DrawText(TextFormat("Killer State: %s", stateNames[state.killerAI.state]), 10, 510, 16, GRAY);
         }
 
-        // Flashlight indicator
-        DrawText(state.flashlightOn ? "FLASHLIGHT: ON" : "FLASHLIGHT: OFF", 10, 580, 16,
-                 state.flashlightOn ? RED : GRAY);
+        // Flashlight indicator with cooldown and usage timer
+        if (state.flashlightCooldownTime > 0.0f) {
+            char cooldownText[32];
+            sprintf(cooldownText, "FLASHLIGHT: COOLDOWN %.1fs", state.flashlightCooldownTime);
+            DrawText(cooldownText, 10, 580, 16, GRAY);
+        } else if (state.flashlightOn) {
+            char usageText[32];
+            float remaining = FLASHLIGHT_MAX_DURATION - state.flashlightUsageTime;
+            sprintf(usageText, "FLASHLIGHT: ON (%.1fs)", remaining);
+            DrawText(usageText, 10, 580, 16, RED);
+        } else {
+            DrawText("FLASHLIGHT: READY", 10, 580, 16, GREEN);
+        }
 
         // Draw game end overlay (on top of everything)
         DrawGameEndOverlay(state);
